@@ -153,7 +153,7 @@ createApp({
       this.loading = true;
       this.sections = [];
       try {
-        const res = await fetch('http://127.0.0.1:8000/analysis', {
+        const res = await fetch('https://tradejournal-production-3f4b.up.railway.app/analysis', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });

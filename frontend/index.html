@@ -306,7 +306,7 @@ createApp({
       setTimeout(() => { this.toast = ''; }, 3000);
     },
     async fetchTrades() {
-      const res = await fetch('http://127.0.0.1:8000/trades', {
+      const res = await fetch('https://tradejournal-production-3f4b.up.railway.app/trades', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       if (res.status === 401) { window.location.href = 'login.html'; return; }
@@ -373,7 +373,7 @@ createApp({
         emotion: this.form.emotion || null,
         notes: this.form.notes || null
       };
-      await fetch('http://127.0.0.1:8000/trades', {
+      await fetch('https://tradejournal-production-3f4b.up.railway.app/trades', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -387,7 +387,7 @@ createApp({
       this.fetchTrades();
     },
     async deleteTrade(id) {
-      await fetch(`http://127.0.0.1:8000/trades/${id}`, {
+      await fetch(`https://tradejournal-production-3f4b.up.railway.app/trades/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });

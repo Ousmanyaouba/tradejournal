@@ -106,7 +106,7 @@ createApp({
       this.loading = true;
       try {
         const endpoint = this.mode === 'login' ? '/auth/login' : '/auth/register';
-        const res = await fetch(`http://127.0.0.1:8000${endpoint}`, {
+        const res = await fetch(`https://tradejournal-production-3f4b.up.railway.app${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: this.username, password: this.password })
