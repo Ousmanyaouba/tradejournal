@@ -3,3 +3,5 @@ uvicorn
 sqlalchemy
 python-dotenv
 anthropic
+python-jose[cryptography]
+passlib[bcrypt]
