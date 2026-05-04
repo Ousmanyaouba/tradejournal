@@ -1,8 +1,10 @@
 import os
 import anthropic
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -18,14 +20,6 @@ models.Base.metadata.create_all(bind=database.engine)
 
 app = FastAPI()
 
-@app.middleware("http")
-async def add_cors_headers(request, call_next):
-    response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    return response
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -34,7 +28,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Security Config ---
 SECRET_KEY = "trading-journal-secret-key-2024"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
@@ -42,7 +35,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# --- Schemas ---
 class TradeCreate(BaseModel):
     pair: str
     direction: str
@@ -61,7 +53,6 @@ class UserCreate(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-# --- Auth Helpers ---
 def hash_password(password: str):
     return pwd_context.hash(password)
 
@@ -87,20 +78,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
-# --- Auth Routes ---
 @app.get("/")
 def root():
-    return {"status": "Trading Journal API is live 🚀"}
+    return {"status": "Trading Journal API is live"}
 
 @app.post("/auth/register")
 def register(user: UserCreate, db: Session = Depends(database.get_db)):
     existing = db.query(models.User).filter(models.User.username == user.username).first()
     if existing:
         raise HTTPException(status_code=400, detail="Username already taken")
-    new_user = models.User(
-        username=user.username,
-        hashed_password=hash_password(user.password)
-    )
+    new_user = models.User(username=user.username, hashed_password=hash_password(user.password))
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -115,7 +102,6 @@ def login(user: UserCreate, db: Session = Depends(database.get_db)):
     token = create_token({"sub": db_user.username})
     return {"access_token": token, "token_type": "bearer"}
 
-# --- Trade Routes ---
 @app.post("/trades")
 def create_trade(trade: TradeCreate, db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
     db_trade = models.Trade(**trade.dict(), user_id=current_user.id)
@@ -140,28 +126,10 @@ def delete_trade(trade_id: int, db: Session = Depends(database.get_db), current_
 @app.post("/analysis")
 def get_analysis(db: Session = Depends(database.get_db), current_user: models.User = Depends(get_current_user)):
     trades = db.query(models.Trade).filter(models.Trade.user_id == current_user.id).order_by(models.Trade.date).all()
-
     if not trades:
         raise HTTPException(status_code=400, detail="No trades to analyze")
-
-    trade_data = [
-        {
-            "pair": t.pair,
-            "direction": t.direction,
-            "entry": t.entry_price,
-            "exit": t.exit_price,
-            "lots": t.lot_size,
-            "pnl": t.pnl,
-            "session": t.session,
-            "emotion": t.emotion,
-            "notes": t.notes,
-            "date": str(t.date)
-        }
-        for t in trades
-    ]
-
+    trade_data = [{"pair": t.pair, "direction": t.direction, "entry": t.entry_price, "exit": t.exit_price, "lots": t.lot_size, "pnl": t.pnl, "session": t.session, "emotion": t.emotion, "notes": t.notes, "date": str(t.date)} for t in trades]
     client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
     prompt = f"""You are an expert trading coach and behavioral analyst.
 A trader has shared their complete trade history with you.
 Analyze this data and provide a detailed behavioral assessment.
@@ -179,22 +147,21 @@ Please analyze and provide:
 Be direct, specific, and reference actual numbers from their data.
 Address the trader directly as "you".
 Do NOT use markdown formatting, hashtags, asterisks, or dashes. Write in plain text only."""
-
-    message = client.messages.create(
-        model="claude-opus-4-5",
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}]
-    )
-
+    message = client.messages.create(model="claude-opus-4-5", max_tokens=1024, messages=[{"role": "user", "content": prompt}])
     return {"analysis": message.content[0].text}
 
-    from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os
-
 static_path = os.path.join(os.path.dirname(__file__), "../frontend")
-app.mount("/app", StaticFiles(directory=static_path), name="static")
+if os.path.exists(static_path):
+    app.mount("/app", StaticFiles(directory=static_path), name="static")
 
-@app.get("/login")
-def serve_login():
-    return FileResponse(os.path.join(static_path, "login.html"))
+    @app.get("/dashboard")
+    def serve_dashboard():
+        return FileResponse(os.path.join(static_path, "index.html"))
+
+    @app.get("/analysis-page")
+    def serve_analysis():
+        return FileResponse(os.path.join(static_path, "analysis.html"))
+
+    @app.get("/login")
+    def serve_login():
+        return FileResponse(os.path.join(static_path, "login.html"))
