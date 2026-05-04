@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trading Journal</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
+
+    header {
+      background: #1a1d27; padding: 18px 40px;
+      border-bottom: 1px solid #2a2d3e;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    header h1 { font-size: 1.4rem; color: #4ade80; letter-spacing: 1px; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 30px 20px; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* WELCOME */
+    .welcome { margin-bottom: 24px; }
+    .welcome h2 { font-size: 1.4rem; color: #fff; font-weight: 600; }
+    .welcome span { color: #4ade80; }
+    .welcome p { color: #555; font-size: 0.88rem; margin-top: 4px; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 30px; right: 30px;
+      background: #14532d; color: #4ade80; padding: 12px 20px;
+      border-radius: 10px; font-size: 0.88rem; font-weight: 600;
+      border-left: 3px solid #4ade80;
+      animation: slideIn 0.3s ease;
+      z-index: 999;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 30px; }
+    .stat-card {
+      background: #1a1d27; border-radius: 12px; padding: 20px;
+      border: 1px solid #2a2d3e; text-align: center;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .stat-card:hover { border-color: #3a3d4e; transform: translateY(-2px); }
+    .stat-card .label { font-size: 0.72rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-card .value { font-size: 1.8rem; font-weight: 700; margin-top: 6px; }
+    .positive { color: #4ade80; }
+    .negative { color: #f87171; }
+    .neutral { color: #60a5fa; }
+
+    .form-section {
+      background: #1a1d27; border-radius: 12px; padding: 24px;
+      border: 1px solid #2a2d3e; margin-bottom: 24px;
+    }
+    .form-section h2 { font-size: 0.85rem; color: #666; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1.5px; }
+    .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 0.72rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #0f1117; border: 1px solid #2a2d3e; border-radius: 8px;
+      color: #e0e0e0; padding: 10px 12px; font-size: 0.9rem;
+      outline: none; transition: border 0.2s, box-shadow 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,0.08);
+    }
+    .form-group.full { grid-column: 1 / -1; }
+    .btn-submit {
+      margin-top: 18px; width: 100%; padding: 12px;
+      background: #4ade80; color: #0f1117; font-weight: 700;
+      font-size: 1rem; border: none; border-radius: 8px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-submit:hover { background: #22c55e; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(74,222,128,0.25); }
+    .btn-submit:disabled { background: #2a2d3e; color: #555; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .table-section {
+      background: #1a1d27; border-radius: 12px; padding: 24px;
+      border: 1px solid #2a2d3e; margin-bottom: 24px;
+    }
+    .table-section h2 { font-size: 0.85rem; color: #666; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1.5px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th { text-align: left; padding: 10px 12px; color: #555; font-size: 0.72rem; text-transform: uppercase; border-bottom: 1px solid #2a2d3e; letter-spacing: 0.5px; }
+    td { padding: 13px 12px; border-bottom: 1px solid #1a1d27; transition: background 0.15s; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1e2130; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px; }
+    .badge-long { background: #0d2b1a; color: #4ade80; border: 1px solid #166534; }
+    .badge-short { background: #2b0d0d; color: #f87171; border: 1px solid #991b1b; }
+    .btn-delete {
+      background: none; border: 1px solid #2a2d3e; color: #555;
+      padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.75rem;
+      transition: all 0.2s;
+    }
+    .btn-delete:hover { border-color: #f87171; color: #f87171; background: #2b0d0d; }
+
+    .empty {
+      text-align: center; color: #444; padding: 50px 20px;
+    }
+    .empty .empty-icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty p { font-size: 0.9rem; }
+
+    .btn-logout {
+      background: none; border: 1px solid #2a2d3e; color: #666;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: #f87171; color: #f87171; }
+
+    .submitting { opacity: 0.7; pointer-events: none; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>📈 Trading Journal</h1>
+    <nav style="display:flex;align-items:center;gap:20px">
+      <span style="color:#555;font-size:0.85rem">👤 {{ username }}</span>
+      <a href="analysis.html" style="color:#4ade80;text-decoration:none;font-size:0.88rem;font-weight:600">🤖 AI Analysis →</a>
+      <button class="btn-logout" @click="logout">Logout</button>
+    </nav>
+  </header>
+
+  <!-- TOAST -->
+  <div v-if="toast" class="toast">✓ {{ toast }}</div>
+
+  <div class="container">
+
+    <!-- WELCOME -->
+    <div class="welcome">
+      <h2>Welcome back, <span>{{ username }}</span> 👋</h2>
+      <p>{{ trades.length === 0 ? 'No trades logged yet. Start by logging your first trade below.' : `You have ${trades.length} trade${trades.length > 1 ? 's' : ''} logged. Keep it up.` }}</p>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="label">Total P&L</div>
+        <div class="value" :class="totalPnl >= 0 ? 'positive' : 'negative'">
+          {{ totalPnl >= 0 ? '+' : '' }}${{ totalPnl.toFixed(2) }}
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Win Rate</div>
+        <div class="value neutral">{{ winRate }}%</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Trades</div>
+        <div class="value neutral">{{ trades.length }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Best Pair</div>
+        <div class="value neutral" style="font-size:1.2rem">{{ bestPair }}</div>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div class="form-section" :class="{ submitting: submitting }">
+      <h2>Log New Trade</h2>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Pair</label>
+          <input v-model="form.pair" placeholder="EUR/USD" />
+        </div>
+        <div class="form-group">
+          <label>Direction</label>
+          <select v-model="form.direction">
+            <option value="">Select</option>
+            <option value="LONG">LONG</option>
+            <option value="SHORT">SHORT</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Session</label>
+          <select v-model="form.session">
+            <option value="">Select</option>
+            <option value="London">London</option>
+            <option value="New York">New York</option>
+            <option value="Asian">Asian</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Entry Price</label>
+          <input v-model="form.entry_price" type="number" step="0.00001" placeholder="1.08500" />
+        </div>
+        <div class="form-group">
+          <label>Exit Price</label>
+          <input v-model="form.exit_price" type="number" step="0.00001" placeholder="1.09000" />
+        </div>
+        <div class="form-group">
+          <label>Lot Size</label>
+          <input v-model="form.lot_size" type="number" step="0.01" placeholder="0.10" />
+        </div>
+        <div class="form-group">
+          <label>P&L ($)</label>
+          <input v-model="form.pnl" type="number" step="0.01" placeholder="50.00" />
+        </div>
+        <div class="form-group">
+          <label>Emotion</label>
+          <select v-model="form.emotion">
+            <option value="">Select</option>
+            <option value="Calm">Calm</option>
+            <option value="Anxious">Anxious</option>
+            <option value="Revenge">Revenge</option>
+            <option value="Confident">Confident</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Notes</label>
+          <textarea v-model="form.notes" rows="2" placeholder="What was your reasoning? What did you learn?"></textarea>
+        </div>
+      </div>
+      <button class="btn-submit" @click="submitTrade" :disabled="submitting">
+        {{ submitting ? 'Saving...' : '+ Log Trade' }}
+      </button>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-section">
+      <h2>Trade History</h2>
+      <div v-if="trades.length === 0" class="empty">
+        <div class="empty-icon">📭</div>
+        <p>No trades yet. Log your first trade above.</p>
+      </div>
+      <table v-else>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Pair</th>
+            <th>Direction</th>
+            <th>Entry</th>
+            <th>Exit</th>
+            <th>Lots</th>
+            <th>P&L</th>
+            <th>Session</th>
+            <th>Emotion</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="trade in trades" :key="trade.id">
+            <td style="color:#555;font-size:0.82rem">{{ formatDate(trade.date) }}</td>
+            <td><strong style="color:#fff">{{ trade.pair }}</strong></td>
+            <td><span class="badge" :class="trade.direction === 'LONG' ? 'badge-long' : 'badge-short'">{{ trade.direction }}</span></td>
+            <td style="color:#888">{{ trade.entry_price }}</td>
+            <td style="color:#888">{{ trade.exit_price }}</td>
+            <td style="color:#888">{{ trade.lot_size }}</td>
+            <td :class="trade.pnl >= 0 ? 'positive' : 'negative'"><strong>{{ trade.pnl >= 0 ? '+' : '' }}${{ trade.pnl.toFixed(2) }}</strong></td>
+            <td style="color:#888">{{ trade.session || '—' }}</td>
+            <td style="color:#888">{{ trade.emotion || '—' }}</td>
+            <td><button class="btn-delete" @click="deleteTrade(trade.id)">✕</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CHART -->
+    <div class="form-section">
+      <h2>P&L Curve</h2>
+      <canvas id="pnlChart" height="100"></canvas>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+const token = localStorage.getItem('token');
+if (!token) window.location.href = 'login.html';
+
+createApp({
+  data() {
+    return {
+      trades: [],
+      chartInstance: null,
+      submitting: false,
+      toast: '',
+      username: localStorage.getItem('username') || '',
+      form: {
+        pair: '', direction: '', entry_price: '',
+        exit_price: '', lot_size: '', pnl: '',
+        session: '', emotion: '', notes: ''
+      }
+    }
+  },
+  computed: {
+    totalPnl() { return this.trades.reduce((sum, t) => sum + t.pnl, 0); },
+    winRate() {
+      if (!this.trades.length) return 0;
+      const wins = this.trades.filter(t => t.pnl > 0).length;
+      return ((wins / this.trades.length) * 100).toFixed(1);
+    },
+    bestPair() {
+      if (!this.trades.length) return '—';
+      const pnlByPair = {};
+      this.trades.forEach(t => { pnlByPair[t.pair] = (pnlByPair[t.pair] || 0) + t.pnl; });
+      return Object.entries(pnlByPair).sort((a, b) => b[1] - a[1])[0][0];
+    }
+  },
+  methods: {
+    showToast(msg) {
+      this.toast = msg;
+      setTimeout(() => { this.toast = ''; }, 3000);
+    },
+    async fetchTrades() {
+      const res = await fetch('/trades', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.status === 401) { window.location.href = 'login.html'; return; }
+      this.trades = await res.json();
+      this.$nextTick(() => this.renderChart());
+    },
+    renderChart() {
+      const ctx = document.getElementById('pnlChart').getContext('2d');
+      if (this.chartInstance) this.chartInstance.destroy();
+      const sorted = [...this.trades].reverse();
+      let cumulative = 0;
+      const labels = sorted.map((t, i) => `Trade ${i + 1}`);
+      const data = sorted.map(t => { cumulative += t.pnl; return parseFloat(cumulative.toFixed(2)); });
+      this.chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Cumulative P&L ($)',
+            data,
+            borderColor: '#4ade80',
+            backgroundColor: 'rgba(74, 222, 128, 0.08)',
+            borderWidth: 2,
+            pointRadius: 5,
+            pointBackgroundColor: data.map(v => v >= 0 ? '#4ade80' : '#f87171'),
+            pointBorderColor: 'transparent',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { labels: { color: '#555', font: { size: 12 } } },
+            tooltip: {
+              backgroundColor: '#1a1d27',
+              borderColor: '#2a2d3e',
+              borderWidth: 1,
+              titleColor: '#aaa',
+              bodyColor: '#4ade80'
+            }
+          },
+          scales: {
+            x: { ticks: { color: '#555' }, grid: { color: '#1a1d27' } },
+            y: { ticks: { color: '#555' }, grid: { color: '#1e2130' } }
+          }
+        }
+      });
+    },
+    async submitTrade() {
+      if (!this.form.pair || !this.form.direction || !this.form.pnl) {
+        this.showToast('Please fill in Pair, Direction and P&L at minimum.');
+        return;
+      }
+      this.submitting = true;
+      const payload = {
+        pair: this.form.pair,
+        direction: this.form.direction,
+        entry_price: parseFloat(this.form.entry_price) || 0,
+        exit_price: parseFloat(this.form.exit_price) || 0,
+        lot_size: parseFloat(this.form.lot_size) || 0,
+        pnl: parseFloat(this.form.pnl),
+        session: this.form.session || null,
+        emotion: this.form.emotion || null,
+        notes: this.form.notes || null
+      };
+      await fetch('/trades', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(payload)
+      });
+      this.form = { pair: '', direction: '', entry_price: '', exit_price: '', lot_size: '', pnl: '', session: '', emotion: '', notes: '' };
+      this.submitting = false;
+      this.showToast('Trade logged successfully!');
+      this.fetchTrades();
+    },
+    async deleteTrade(id) {
+      await fetch(`/trades/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      this.showToast('Trade deleted.');
+      this.fetchTrades();
+    },
+    logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      window.location.href = 'login.html';
+    },
+    formatDate(dt) {
+      return new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+  },
+  mounted() { this.fetchTrades(); }
+}).mount('#app');
+</script>
+</body>
+</html>

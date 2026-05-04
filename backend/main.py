@@ -150,7 +150,7 @@ Do NOT use markdown formatting, hashtags, asterisks, or dashes. Write in plain t
     message = client.messages.create(model="claude-opus-4-5", max_tokens=1024, messages=[{"role": "user", "content": prompt}])
     return {"analysis": message.content[0].text}
 
-static_path = os.path.join(os.path.dirname(__file__), "../frontend")
+static_path = os.path.join(os.path.dirname(__file__), ".")
 if os.path.exists(static_path):
     app.mount("/app", StaticFiles(directory=static_path), name="static")
 
