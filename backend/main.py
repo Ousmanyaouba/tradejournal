@@ -187,3 +187,14 @@ Do NOT use markdown formatting, hashtags, asterisks, or dashes. Write in plain t
     )
 
     return {"analysis": message.content[0].text}
+
+    from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+
+static_path = os.path.join(os.path.dirname(__file__), "../frontend")
+app.mount("/app", StaticFiles(directory=static_path), name="static")
+
+@app.get("/login")
+def serve_login():
+    return FileResponse(os.path.join(static_path, "login.html"))
