@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Analysis — Trading Journal</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
+
+    header {
+      background: #1a1d27; padding: 18px 40px;
+      border-bottom: 1px solid #2a2d3e;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    header h1 { font-size: 1.4rem; color: #4ade80; letter-spacing: 1px; }
+    nav a { color: #666; text-decoration: none; margin-left: 24px; font-size: 0.88rem; transition: color 0.2s; }
+    nav a:hover, nav a.active { color: #4ade80; }
+    .btn-logout {
+      background: none; border: 1px solid #2a2d3e; color: #666;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem;
+      transition: all 0.2s; margin-left: 20px;
+    }
+    .btn-logout:hover { border-color: #f87171; color: #f87171; }
+
+    .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .back-link { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 32px; color: #555; text-decoration: none; font-size: 0.88rem; transition: color 0.2s; }
+    .back-link:hover { color: #4ade80; }
+
+    .hero { text-align: center; margin-bottom: 36px; }
+    .hero .icon { font-size: 3rem; margin-bottom: 12px; }
+    .hero h2 { font-size: 1.7rem; color: #fff; margin-bottom: 8px; }
+    .hero p { color: #555; font-size: 0.9rem; max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+    .btn-analyze {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 16px;
+      background: #4ade80; color: #0f1117;
+      font-weight: 700; font-size: 1.05rem;
+      border: none; border-radius: 10px; cursor: pointer;
+      transition: all 0.2s; margin-bottom: 30px;
+    }
+    .btn-analyze:hover { background: #22c55e; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(74,222,128,0.3); }
+    .btn-analyze:disabled { background: #1a1d27; color: #555; cursor: not-allowed; transform: none; box-shadow: none; border: 1px solid #2a2d3e; }
+
+    .spinner { width: 18px; height: 18px; border: 2px solid #0f1117; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-card {
+      background: #1a1d27; border: 1px solid #2a2d3e; border-radius: 12px;
+      padding: 40px; text-align: center;
+    }
+    .loading-card .dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 16px; }
+    .loading-card .dot {
+      width: 10px; height: 10px; background: #4ade80; border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .loading-card .dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-card .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+    .loading-card p { color: #555; font-size: 0.9rem; }
+
+    .analysis-result { display: flex; flex-direction: column; gap: 16px; }
+
+    .section-card {
+      background: #1a1d27; border: 1px solid #2a2d3e; border-radius: 12px; padding: 24px;
+      border-left: 3px solid #4ade80;
+    }
+    .section-card h3 {
+      color: #4ade80; font-size: 0.78rem; text-transform: uppercase;
+      letter-spacing: 1.5px; margin-bottom: 14px; font-weight: 700;
+    }
+    .section-card p { color: #aaa; line-height: 1.8; font-size: 0.92rem; white-space: pre-wrap; }
+
+    .timestamp { text-align: center; color: #333; font-size: 0.78rem; margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>📈 Trading Journal</h1>
+    <nav>
+      <a href="index.html">Dashboard</a>
+      <a href="analysis.html" class="active">AI Analysis</a>
+      <button class="btn-logout" @click="logout">Logout</button>
+    </nav>
+  </header>
+
+  <div class="container">
+    <a href="index.html" class="back-link">← Back to Dashboard</a>
+
+    <div class="hero">
+      <div class="icon">🤖</div>
+      <h2>AI Behavioral Analysis</h2>
+      <p>Claude will analyze your complete trade history and identify patterns, emotional biases, and areas for improvement.</p>
+    </div>
+
+    <button class="btn-analyze" @click="runAnalysis" :disabled="loading">
+      <div v-if="loading" class="spinner"></div>
+      <span>{{ loading ? 'Analyzing your trades...' : '✨ Run AI Analysis' }}</span>
+    </button>
+
+    <div v-if="loading" class="loading-card">
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <p>Claude is reading your trade history and identifying patterns...</p>
+    </div>
+
+    <div v-if="sections.length > 0" class="analysis-result">
+      <div v-for="(section, i) in sections" :key="i" class="section-card">
+        <h3>{{ section.title }}</h3>
+        <p>{{ section.content }}</p>
+      </div>
+      <div class="timestamp">Analysis generated at {{ timestamp }}</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+const token = localStorage.getItem('token');
+if (!token) window.location.href = 'login.html';
+
+createApp({
+  data() {
+    return { sections: [], loading: false, timestamp: '' }
+  },
+  methods: {
+    parseAnalysis(text) {
+      const lines = text.split('\n');
+      const sections = [];
+      let current = null;
+      for (const line of lines) {
+        const match = line.match(/^(\d+)\.\s+([A-Z\s&/—-]+?)(?:\s*[-—]\s*(.*))?$/);
+        if (match) {
+          if (current) sections.push(current);
+          current = { title: match[2].trim(), content: match[3] ? match[3].trim() + '\n' : '' };
+        } else if (current && line.trim()) {
+          current.content += line + '\n';
+        }
+      }
+      if (current) sections.push(current);
+      return sections.length > 0 ? sections : [{ title: 'Analysis', content: text }];
+    },
+    async runAnalysis() {
+      this.loading = true;
+      this.sections = [];
+      try {
+        const res = await fetch('http://127.0.0.1:8000/analysis', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (res.status === 401) { window.location.href = 'login.html'; return; }
+        const data = await res.json();
+        this.sections = this.parseAnalysis(data.analysis);
+        this.timestamp = new Date().toLocaleTimeString();
+      } catch (e) {
+        this.sections = [{ title: 'Error', content: 'Cannot connect to backend. Make sure your server is running.' }];
+      }
+      this.loading = false;
+    },
+    logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      window.location.href = 'login.html';
+    }
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
