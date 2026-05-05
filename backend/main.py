@@ -12,6 +12,7 @@ from typing import Optional
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+import hashlib
 import models, database
 
 load_dotenv()
@@ -32,7 +33,7 @@ SECRET_KEY = "trading-journal-secret-key-2024"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Using sha256 for simplicity
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 class TradeCreate(BaseModel):
@@ -54,10 +55,10 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 def hash_password(password: str):
-    return pwd_context.hash(password[:72])
+    return hashlib.sha256(password.encode()).hexdigest()
 
 def verify_password(plain, hashed):
-    return pwd_context.verify(plain[:72], hashed)
+    return hashlib.sha256(plain.encode()).hexdigest() == hashed
 
 def create_token(data: dict):
     to_encode = data.copy()
