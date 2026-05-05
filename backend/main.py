@@ -166,3 +166,10 @@ if os.path.exists(static_path):
     @app.get("/login")
     def serve_login():
         return FileResponse(os.path.join(static_path, "login.html"))
+
+@app.get("/index.html")
+def serve_index():
+    from fastapi.responses import FileResponse
+    import os
+    static_path = os.path.join(os.path.dirname(__file__), ".")
+    return FileResponse(os.path.join(static_path, "index.html"))
