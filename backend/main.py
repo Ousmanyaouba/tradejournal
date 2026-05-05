@@ -54,7 +54,7 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 def hash_password(password: str):
-    return pwd_context.hash(password)
+    return pwd_context.hash(password[:72])
 
 def verify_password(plain, hashed):
     return pwd_context.verify(plain, hashed)
