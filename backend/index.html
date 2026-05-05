@@ -119,7 +119,7 @@
     <h1>📈 Trading Journal</h1>
     <nav style="display:flex;align-items:center;gap:20px">
       <span style="color:#555;font-size:0.85rem">👤 {{ username }}</span>
-      <a href="analysis.html" style="color:#4ade80;text-decoration:none;font-size:0.88rem;font-weight:600">🤖 AI Analysis →</a>
+      <a href="/analysis-page" style="color:#4ade80;text-decoration:none;font-size:0.88rem;font-weight:600">🤖 AI Analysis →</a>
       <button class="btn-logout" @click="logout">Logout</button>
     </nav>
   </header>
@@ -269,7 +269,7 @@
 <script>
 const { createApp } = Vue;
 const token = localStorage.getItem('token');
-if (!token) window.location.href = 'login.html';
+if (!token) window.location.href = '/login';
 
 createApp({
   data() {
@@ -309,7 +309,7 @@ createApp({
       const res = await fetch('/trades', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
-      if (res.status === 401) { window.location.href = 'login.html'; return; }
+      if (res.status === 401) { window.location.href = '/login'; return; }
       this.trades = await res.json();
       this.$nextTick(() => this.renderChart());
     },
@@ -397,7 +397,7 @@ createApp({
     logout() {
       localStorage.removeItem('token');
       localStorage.removeItem('username');
-      window.location.href = 'login.html';
+      window.location.href = '/login';
     },
     formatDate(dt) {
       return new Date(dt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });

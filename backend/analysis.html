@@ -126,7 +126,7 @@
 <script>
 const { createApp } = Vue;
 const token = localStorage.getItem('token');
-if (!token) window.location.href = 'login.html';
+if (!token) window.location.href = '/login';
 
 createApp({
   data() {
@@ -157,7 +157,7 @@ createApp({
           method: 'POST',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         });
-        if (res.status === 401) { window.location.href = 'login.html'; return; }
+        if (res.status === 401) { window.location.href = '/login'; return; }
         const data = await res.json();
         this.sections = this.parseAnalysis(data.analysis);
         this.timestamp = new Date().toLocaleTimeString();
@@ -169,7 +169,7 @@ createApp({
     logout() {
       localStorage.removeItem('token');
       localStorage.removeItem('username');
-      window.location.href = 'login.html';
+      window.location.href = '/login';
     }
   }
 }).mount('#app');
